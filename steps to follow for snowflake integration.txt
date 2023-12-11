@@ -1,0 +1,120 @@
+-- Drop etl_project_snowwh_by_adi
+drop warehouse if exists etl_project_snowwh_by_adi;
+
+-- Warehouse Creation 
+create warehouse if not exists etl_project_snowwh_by_adi;
+
+-- Drop etl_project_snowdb_by_adi
+drop database if exists etl_project_snowdb_by_adi;
+
+-- Database Creation 
+create database if not exists etl_project_snowdb_by_adi;
+
+-- Drop etl_project_snowdb_by_adi.prod
+drop schema if exists etl_project_snowdb_by_adi.prod;
+
+-- Schema Creation 
+create schema if not exists etl_project_snowdb_by_adi.prod;
+
+-- Specify the active/current database for the session.
+use etl_project_snowdb_by_adi;
+
+-- Specify the role
+use role ACCOUNTADMIN;
+
+-- Drop etl_project_parquet_format_by_adi
+drop FILE FORMAT if exists etl_project_parquet_format_by_adi;
+
+-- file format Creation 
+CREATE or replace FILE FORMAT etl_project_parquet_format_by_adi
+TYPE = "parquet";
+
+-- Drop etl_project_sto_intg_by_adi
+drop STORAGE INTEGRATION if exists etl_project_sto_intg_by_adi;
+
+-- storage integration Creation 
+CREATE OR REPLACE STORAGE INTEGRATION etl_project_sto_intg_by_adi
+TYPE = EXTERNAL_STAGE
+ENABLED = TRUE
+STORAGE_PROVIDER = S3
+-- Go to S3 bucket under output folder copy the S3 URL.
+STORAGE_ALLOWED_LOCATIONS = ("s3://etl-project-s3-by-adi/output/newproduct/")
+-- Go to iam role (etl-project-iam-role2-by-adi) and copy the ARN number from there
+STORAGE_AWS_ROLE_ARN = "arn:aws:iam::283192365704:role/etl-project-iam-role2-by-adi";
+
+-- Link Snowflake and AWS account
+DESC STORAGE INTEGRATION etl_project_sto_intg_by_adi;
+
+/* After getting results go to IAM role --> Trust relationships --> edit trust policy --> 
+   copy (STORAGE_AWS_IAM_USER_ARN) property_value and paste it aws in IDM under AWS and 
+   copy (STORAGE_AWS_EXTERNAL_ID) property_value and paste it aws in IDM under sts:ExternalId --> update policy --> therefore, 
+   your aws and snowflake accounts are linked successfully
+   Note: external id will be change if you drop and re-create storage integration. */
+
+-- Drop etl_project_stage_by_adi
+drop STAGE if exists etl_project_stage_by_adi;
+
+-- Stage Creation 
+CREATE OR REPLACE STAGE etl_project_stage_by_adi
+-- Go to S3 bucket under output folder copy the S3 URL
+URL = "s3://etl-project-s3-by-adi/output/newproduct/"
+-- storage integration name
+STORAGE_INTEGRATION= etl_project_sto_intg_by_adi
+-- file format name
+FILE_FORMAT = etl_project_parquet_format_by_adi;
+
+
+-- check file loaded or not
+list @etl_project_stage_by_adi
+
+/* -- Drop customer_product
+drop TABLE if exists customer_product;
+
+-- Table Creation 
+CREATE or replace TABLE customer_product
+(year string, customer_count BIGINT, quantity BIGINT);
+
+-- copy stage data (etl_project_stage_by_adi) to target table (product)
+copy into customer_product 
+from ( 
+select 
+$1:new_year::bigint,
+$1:countt::bigint,
+$1:quantityy::bigint
+from @etl_project_stage_by_adi);
+
+-- Query results
+select * from customer_product; */
+
+-- Drop ext_customer_product
+drop TABLE if exists etl_project_snowdb_by_adi.PUBLIC.ext_customer_product;
+
+-- create external table
+CREATE or replace external table etl_project_snowdb_by_adi.PUBLIC.ext_customer_product
+(year string as (Value:new_year::string), customer_count BIGINT as (Value:countt::bigint), quantity BIGINT as (Value:quantityy::bigint))
+with location = @etl_project_stage_by_adi file_format='etl_project_parquet_format_by_adi';
+
+-- check external tables
+# in results we will get notification channel id, copy and page in S3 bucket properties under SQS event notification.
+show external tables;
+
+-- Refresh external table if required (avoid doing this)
+alter external table etl_project_snowdb_by_adi.PUBLIC.ext_customer_product refresh;
+
+-- check data
+select * from etl_project_snowdb_by_adi.PUBLIC.ext_customer_product;
+
+select distinct year from etl_project_snowdb_by_adi.PUBLIC.ext_customer_product;
+
+delete from etl_project_snowdb_by_adi.PUBLIC.ext_customer_product;
+
+
+
+
+
+
+
+
+
+
+

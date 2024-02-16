@@ -20,4 +20,4 @@ The objective of the task involves obtaining information from an S3 bucket, tran
 Amazon web services, Snowflake, Python(PySpark), SQL, Excel
 
 ### PySpark script
-[script_file](https://github.com/Adinarayana7008/Integrating_AWS_S3_data_with_the_Snowflake_database/blob/main/pyspark_script_file.txt)
+[script_file](https://github.com/Adinarayana7008/Integrating_AWS_S3_data_with_the_Snowflake_database/blob/main/pyspark_script_file.py)
